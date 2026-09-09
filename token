@@ -1,0 +1,57 @@
+(async function getMorpheanToken() {
+  // 1. Zugangsdaten und Server anpassen
+  const USERNAME = "DEIN_BENUTZERNAME";
+  const PASSWORD = "DEIN_PASSWORT";
+  
+  // Wenn du das Skript direkt auf der Web-Oberfläche deines VMS ausführst,
+  // übernimmt window.location.origin automatisch die richtige URL.
+  // Andernfalls trage hier die Server-Adresse ein (z. B. "https://mein-vms-server.de"):
+  const SERVER_URL = window.location.origin.startsWith("http") 
+    ? window.location.origin 
+    : "https://DEIN_VMS_SERVER";
+
+  const ENDPOINT = `${SERVER_URL}/vms-api/v1/userprofile/token`;
+
+  // 2. HTTP Basic Auth Header erzeugen (UTF-8 sicher)
+  const credentials = btoa(unescape(encodeURIComponent(`${USERNAME}:${PASSWORD}`)));
+
+  console.log(`%c[Morphean API] Fordere Token an von: ${ENDPOINT}...`, "color: #2196F3; font-weight: bold;");
+
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: "GET",
+      headers: {
+        "Authorization": `Basic ${credentials}`,
+        "Accept": "application/json"
+      },
+      credentials: "include" // Sendet bestehende Session-Cookies mit
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`%cFehler ${response.status} (${response.statusText}):`, "color: red; font-weight: bold;", errorText);
+      return;
+    }
+
+    const data = await response.json();
+    const expireDate = data.expireDate ? new Date(data.expireDate).toLocaleString() : "unbekannt";
+
+    console.log("%c✓ Token erfolgreich erhalten!", "color: #4CAF50; font-weight: bold; font-size: 14px;");
+    console.log("%cToken:", "font-weight: bold;", data.token);
+    console.log("%cGültig bis:", "font-weight: bold;", expireDate);
+    console.log("Vollständige Antwort:", data);
+
+    // Optional: Direkt in die Zwischenablage kopieren
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(data.token);
+      console.log("%c(Token wurde automatisch in deine Zwischenablage kopiert)", "color: gray;");
+    }
+
+    // Global in window hinterlegen zur weiteren Verwendung in der Konsole
+    window.morpheanToken = data.token;
+    console.log("%cTipp: Der Token steht dir in der Konsole auch über 'window.morpheanToken' zur Verfügung.", "color: #ff9800;");
+
+  } catch (err) {
+    console.error("%cNetzwerk- oder Verbindungsfehler:", "color: red; font-weight: bold;", err);
+  }
+})();
